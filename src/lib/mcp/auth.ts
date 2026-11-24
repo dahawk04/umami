@@ -41,19 +41,30 @@ export async function authenticateMcpRequest(request: Request): Promise<McpAuthR
   };
 }
 
-export function mcpAuthErrorResponse(result: McpAuthResult) {
+/**
+ * Builds the 401 challenge. When `resourceMetadataUrl` is given, OAuth-only MCP clients use it
+ * to discover the authorization server (RFC 9728).
+ */
+export function mcpAuthErrorResponse(result: McpAuthResult, resourceMetadataUrl?: string) {
   if (result.ok) {
     throw new Error('mcpAuthErrorResponse called with a successful result.');
   }
 
   const failure = result as Extract<McpAuthResult, { ok: false }>;
+  const challenge = [
+    'Bearer realm="Umami MCP"',
+    `error="${failure.error}"`,
+    resourceMetadataUrl ? `resource_metadata="${resourceMetadataUrl}"` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return Response.json(
     { error: failure.error, error_description: failure.description },
     {
       status: failure.status,
       headers: {
-        'www-authenticate': `Bearer realm="Umami MCP", error="${failure.error}"`,
+        'www-authenticate': challenge,
         'cache-control': 'no-store',
       },
     },

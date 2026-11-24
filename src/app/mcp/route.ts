@@ -6,6 +6,7 @@ import { uuid } from '@/lib/crypto';
 import { getBaseUrl } from '@/lib/get-base-url';
 import { authenticateMcpRequest, mcpAuthErrorResponse } from '@/lib/mcp/auth';
 import { createInProcessFetch } from '@/lib/mcp/dispatch';
+import { getIssuer, getProtectedResourceMetadataUrl } from '@/lib/mcp/oauth';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,7 @@ async function handle(request: Request) {
   const auth = await authenticateMcpRequest(request);
 
   if (!auth.ok) {
-    return mcpAuthErrorResponse(auth);
+    return mcpAuthErrorResponse(auth, getProtectedResourceMetadataUrl(getIssuer(request.headers)));
   }
 
   const requestId = uuid();

@@ -34,16 +34,13 @@ describe('authenticateMcpRequest', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
-  test.each(['not-a-token', 'not-a-key'])(
-    'rejects non-API-key credentials: %s',
-    async token => {
-      await expect(authenticateMcpRequest(request(token))).resolves.toMatchObject({
-        ok: false,
-        status: 401,
-      });
-      expect(checkApiKeyAuthMock).not.toHaveBeenCalled();
-    },
-  );
+  test.each(['not-a-token', 'not-a-key'])('rejects non-API-key credentials: %s', async token => {
+    await expect(authenticateMcpRequest(request(token))).resolves.toMatchObject({
+      ok: false,
+      status: 401,
+    });
+    expect(checkApiKeyAuthMock).not.toHaveBeenCalled();
+  });
 
   test('accepts self-hosted API keys and preserves owner identity', async () => {
     checkApiKeyAuthMock.mockResolvedValue({
@@ -80,5 +77,18 @@ describe('authenticateMcpRequest', () => {
       status: 401,
     });
     expect(checkApiKeyAuthMock).not.toHaveBeenCalled();
+  });
+
+  test('points OAuth clients at the protected resource metadata', async () => {
+    const result = await authenticateMcpRequest(request());
+    const response = mcpAuthErrorResponse(
+      result,
+      'https://analytics.example.com/.well-known/oauth-protected-resource',
+    );
+
+    expect(response.headers.get('www-authenticate')).toBe(
+      'Bearer realm="Umami MCP", error="invalid_request", ' +
+        'resource_metadata="https://analytics.example.com/.well-known/oauth-protected-resource"',
+    );
   });
 });
